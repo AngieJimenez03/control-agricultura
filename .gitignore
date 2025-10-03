@@ -1,0 +1,12 @@
+# Ignorar dependencias
+node_modules/
+
+# Ignorar variables de entorno (contraseñas, claves API, etc.)
+.env
+
+# Archivos de build/compilación
+dist/
+build/
+
+# Archivos del sistema
+.DS_Store
