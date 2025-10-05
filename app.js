@@ -1,27 +1,29 @@
 import express from 'express';
-import dbClient from './config/dbClient.js';
 import 'dotenv/config';
+import cors from 'cors';
+import dbClient from './config/dbClient.js';
 import routesUsuarios from './routes/userRouter.js';
+import { errorHandler } from './middlewares/errorHandler.js';
 
-// Instancia de Express
 const app = express();
 
 // Middlewares
-app.use(express.json()); // para recibir JSON
-app.use(express.urlencoded({ extended: true })); // para recibir datos de formularios
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({extended:true}));
 
 // Rutas
 app.use('/users', routesUsuarios);
 
-try {
-    const PORT = process.env.PORT || 3000;
-    app.listen(PORT, () => console.log(`Servidor activo en el puerto ${PORT}`));
-} catch (e) {
-    console.log(e);
-}
+// Error handler global
+app.use(errorHandler);
 
-// Cerrar conexión con la DB al terminar
-process.on('SIGINT', async () => {
-    await dbClient.cerrarConexion();
-    process.exit(0);
-})
+// Servidor
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, ()=>console.log(`Servidor activo en puerto ${PORT}`));
+
+// Cerrar conexión DB al terminar
+process.on('SIGINT', async ()=>{
+  await dbClient.cerrarConexion();
+  process.exit(0);
+});

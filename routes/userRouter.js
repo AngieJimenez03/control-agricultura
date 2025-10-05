@@ -1,11 +1,18 @@
+
+
+
 import express from 'express';
-const route = express.Router();
-import userController  from '../controllers/user.js';
+import userController from '../controllers/user.js';
+import { verificarToken } from '../middlewares/authMiddleware.js';
 
-route.post('/register',userController.register);
-route.post('/login',userController.login);
-// route.get('/');
-// route.put('/');
-// route.delete('/');
+const router = express.Router();
 
-export default route
+router.post('/register', userController.register);
+router.post('/login', userController.login);
+
+// Ruta protegida de ejemplo (canal)
+router.get('/canal', verificarToken, (req,res)=>{
+  res.json({msg: `Bienvenido al canal ${req.user.email}`});
+});
+
+export default router;

@@ -1,66 +1,36 @@
-import usuariosModel from '../models/user.js'
-import bcrypt from 'bcryptjs'
-import JsonWebToken from 'jsonwebtoken';
+import usuariosModel from '../models/user.js';
+import bcrypt from 'bcryptjs';
 import { generarToken } from '../helpers/autenticacion.js';
-
 
 class usuariosControllers {
 
-     constructor(){
-
-     }
-
-     async register (req,res){
-     try { 
-      const {email, nombre, telefono, clave } = req.body;
-      const usuarioExiste = await usuariosModel.getOne({email})
-      if(usuarioExiste){
-        return res.status(400).json({error: 'El usuario ya existe'})
-      }
+  async register(req, res, next){
       
-     const claveEncryptada = await bcrypt.hash(clave,10);
+    try {
+       
+      const {nombre, email, telefono, clave} = req.body;
+      const existe = await usuariosModel.getOne({email});
+      if(existe) return res.status(400).json({error:"Usuario ya existe"});
 
-       const data = await usuariosModel.create({
-        email,
-        nombre,
-        telefono,
-        clave: claveEncryptada
-      });
+      const claveHash = await bcrypt.hash(clave, 10);
+      const data = await usuariosModel.create({nombre, email, telefono, clave: claveHash});
+      res.status(201).json(data);
+    } catch(e){ next(e); }
+  }
 
-      res.status(200).json(data);
-     
-        } catch (e) {
-          console.log(e)
-            res.status(500).send(e);
-                      
-                  }
-      
+  async login(req, res, next){
+    try {
+      const {email, clave} = req.body;
+      const usuario = await usuariosModel.getOne({email});
+      if(!usuario) return res.status(400).json({error:"Usuario no existe"});
 
-     }
+      const valido = await bcrypt.compare(clave, usuario.clave);
+      if(!valido) return res.status(400).json({error:"Contraseña incorrecta"});
 
-      async login (req,res){
-      const {email,clave}=  req.body;
-
-       const usuarioExiste = await usuariosModel.getOne({email})
-      if(!usuarioExiste){
-        return res.status(400).json({error: 'El usuario no existe'})
-      }
-
-    const claveValida= await bcrypt.compare(clave, usuarioExiste.clave);
-
-    if(!claveValida){
-        return res.status(400).json({error: 'contraseña incorrecta'})
-      }
-
-       const token = generarToken(email);
-
-      return res.status(200).json({msg:'Usuario Autenticado', token});
-    }
-      
-
-      
-
-     }
-
+      const token = generarToken(email);
+      res.status(200).json({msg:"Usuario autenticado", token});
+    } catch(e){ next(e); }
+  }
+}
 
 export default new usuariosControllers();

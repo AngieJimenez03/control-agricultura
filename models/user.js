@@ -40,3 +40,4 @@ async create(user) {
 }
 
 export default new usuariosModel
+
