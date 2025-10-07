@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Chat Público</title>
+</head>
+<body>
+  <h2>Chat Público</h2>
+  <div id="chat" style="border:1px solid #aaa; height:200px; overflow:auto; padding:5px;"></div>
+  <input id="msg" placeholder="Escribe un mensaje..." />
+  <button id="send">Enviar</button>
+
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <script>
+    const token = prompt("Pega tu token JWT:");
+
+    const socket = io("http://localhost:5100", {
+      auth: { token }
+    });
+
+    const chat = document.getElementById("chat");
+    const msg = document.getElementById("msg");
+    const sendBtn = document.getElementById("send");
+
+    socket.on("connect", () => {
+      chat.innerHTML += `<p><b>Conectado como:</b> ${socket.id}</p>`;
+    });
+
+    socket.on("mensaje_publico", (data) => {
+      chat.innerHTML += `<p><b>[${data.rol}] ${data.emisor}</b>: ${data.texto} <small>${data.fecha}</small></p>`;
+      chat.scrollTop = chat.scrollHeight;
+    });
+
+    sendBtn.addEventListener("click", () => {
+      const texto = msg.value.trim();
+      if (texto) socket.emit("mensaje_publico", { texto });
+      msg.value = "";
+    });
+  </script>
+</body>
+</html>
