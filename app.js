@@ -6,6 +6,8 @@ import dbClient from './config/dbClient.js';
 import userRoutes from './routes/userRouter.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 import lotesRoutes from './routes/lotesRouter.js';
+import tareasRoutes from './routes/tareasRouter.js';
+import incideciasRoutes from './routes/incidenciasRouter.js';
 
 
 //  Agregamos HTTP y Socket.IO
@@ -21,6 +23,10 @@ app.use(express.urlencoded({ extended: true }));
 // Rutas HTTP
 app.use('/users', userRoutes);
 app.use('/lotes',lotesRoutes);
+app.use('/tareas', tareasRoutes);
+app.use('/incidencias', incideciasRoutes);
+
+
 
 // Middleware global de errores
 app.use(errorHandler);

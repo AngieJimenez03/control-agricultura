@@ -4,21 +4,35 @@ import { generarToken } from '../helpers/autenticacion.js';
 
 class usuariosControllers {
 
-  async register(req, res, next){
-      
+  async register(req, res, next) {
     try {
-       
-      const {nombre, email, telefono, clave, rol} = req.body;
-      const existe = await usuariosModel.getOne({email});
-      if(existe) return res.status(400).json({error:"Usuario ya existe"});
+      const { nombre, email, telefono, clave } = req.body;
+
+      const existe = await usuariosModel.getOne({ email });
+      if (existe) return res.status(400).json({ error: "El usuario ya existe." });
 
       const claveHash = await bcrypt.hash(clave, 10);
-      const data = await usuariosModel.create({nombre, email, telefono, clave: claveHash, rol: rol || 'tecnico'});
-      res.status(201).json(data);
-    } catch(e){ next(e); }
-  }
+      const nuevoUsuario = await usuariosModel.create({
+        nombre,
+        email,
+        telefono,
+        clave: claveHash,
+        rol: "tecnico", 
+      });
 
-  async login(req, res, next){
+      res.status(201).json({
+        msg: "Usuario registrado correctamente.",
+        usuario: {
+          id: nuevoUsuario._id,
+          nombre: nuevoUsuario.nombre,
+          email: nuevoUsuario.email,
+          rol: nuevoUsuario.rol,
+        },
+      });
+    } catch (e) {
+      next(e);
+    }
+  }  async login(req, res, next){
     try {
       const {email, clave} = req.body;
 
@@ -58,7 +72,7 @@ class usuariosControllers {
     }
   }
 
-  // ✅ Actualizar usuario (solo admin)
+  //  Actualizar usuario (solo admin)
   async update(req, res, next) {
     try {
       const { id } = req.params;
@@ -94,6 +108,17 @@ class usuariosControllers {
         return res.status(404).json({ error: "Usuario no encontrado" });
 
       res.status(200).json({ msg: "Usuario eliminado correctamente" });
+    } catch (error) {
+      next(error);
+    }
+  }
+   async cambiarRol(req, res, next) {
+    try {
+      const { id } = req.params;
+      const { rol } = req.body;
+      const usuario = await usuariosModel.update(id, { rol });
+      if (!usuario) return res.status(404).json({ error: "Usuario no encontrado" });
+      res.status(200).json({ msg: "Rol actualizado correctamente", usuario });
     } catch (error) {
       next(error);
     }

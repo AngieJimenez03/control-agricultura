@@ -1,20 +1,18 @@
 export default function chatPublic(io, socket) {
-  // Escuchar cuando un cliente envía un mensaje al canal público
   socket.on("mensaje_publico", (data) => {
     const mensaje = {
-      emisor: socket.user.email || "Usuario desconocido", // si no tiene nombre, usa email
-      rol: socket.user.rol || "sin rol",
+      idEmisor: socket.id, // esto permite identificar al emisor
+      emisor: socket.user?.email || "Usuario desconocido",
+      rol: socket.user?.rol || "sin rol",
       texto: data.texto?.trim(),
-      fecha: new Date().toLocaleString(),
+      fecha: new Date().toLocaleTimeString(),
     };
 
+    if (!mensaje.texto) return;
 
+    console.log(`[${mensaje.rol}] ${mensaje.emisor}: ${mensaje.texto}`);
 
-    if (!mensaje.texto) return; // evita mensajes vacíos
-
-    console.log(` [${mensaje.rol}] ${mensaje.emisor}: ${mensaje.texto}`);
-
-    // Emitir el mensaje a todos los conectados (canal público)
+    // Enviar el mensaje a todos los clientes
     io.emit("mensaje_publico", mensaje);
   });
 }

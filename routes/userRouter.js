@@ -11,6 +11,7 @@ router.post('/register', userController.register);
 router.post('/login', userController.login);
 
 
+
 // Rutas protegidas
 router.get('/perfil', verificarToken, (req, res) => {
   res.json({ msg: `Bienvenido ${req.user.email}`, rol: req.user.rol });
@@ -21,6 +22,7 @@ router.get("/", verificarToken, verificarRol(["admin"]), userController.getAll);
 router.get("/:id", verificarToken, verificarRol(["admin"]), userController.getById);
 router.put("/:id", verificarToken, verificarRol(["admin"]), userController.update);
 router.delete("/:id", verificarToken, verificarRol(["admin"]), userController.delete);
+router.put('/:id/rol', verificarToken, verificarRol(['admin']), userController.cambiarRol);
 
 // Ruta protegida de ejemplo (canal)
 router.get('/canal', verificarToken, (req,res)=>{
