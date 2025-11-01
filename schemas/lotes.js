@@ -30,11 +30,10 @@ const loteSchema = new mongoose.Schema({
     ref: "users",
     default: null
   },
-  tecnicosAsignados: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "users",
-    default: []
-  }]
+  creadoPor: {
+    type: String, // email del admin que creó el lote
+    required: true
+  }
 }, { timestamps: true });
 
-export default mongoose.model('lots', loteSchema);
+export default mongoose.model("lots", loteSchema);

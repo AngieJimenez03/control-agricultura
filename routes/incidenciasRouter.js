@@ -5,16 +5,17 @@ import { verificarRol } from "../middlewares/roleMiddleware.js";
 
 const router = express.Router();
 
-// Técnicos → crean incidencias
-router.post("/", verificarToken, verificarRol(["tecnico"]), incidenciasController.crearIncidencia);
+// Crear incidencia (técnico o admin)
+router.post("/", verificarToken, verificarRol(["tecnico", "admin"]), incidenciasController.crearIncidencia);
 
-// Todos → pueden ver incidencias (según rol)
+// Ver incidencias (todos los roles)
 router.get("/", verificarToken, incidenciasController.obtenerIncidencias);
+router.get("/:id", verificarToken, incidenciasController.obtenerIncidenciaPorId);
 
-// Supervisores → actualizan estado
-router.put("/:id", verificarToken, verificarRol(["supervisor"]), incidenciasController.actualizarEstado);
+// Actualizar estado (supervisor o admin)
+router.put("/:id", verificarToken, verificarRol(["supervisor", "admin"]), incidenciasController.actualizarIncidencia);
 
-// Admin → elimina incidencias
+// Eliminar incidencia (solo admin)
 router.delete("/:id", verificarToken, verificarRol(["admin"]), incidenciasController.eliminarIncidencia);
 
 export default router;

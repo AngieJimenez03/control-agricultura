@@ -8,6 +8,8 @@ import { errorHandler } from './middlewares/errorHandler.js';
 import lotesRoutes from './routes/lotesRouter.js';
 import tareasRoutes from './routes/tareasRouter.js';
 import incideciasRoutes from './routes/incidenciasRouter.js';
+import dashboardRoutes from "./routes/dashboardRouter.js";
+
 
 
 //  Agregamos HTTP y Socket.IO
@@ -21,10 +23,12 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Rutas HTTP
-app.use('/users', userRoutes);
-app.use('/lotes',lotesRoutes);
-app.use('/tareas', tareasRoutes);
-app.use('/incidencias', incideciasRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/lots',lotesRoutes);
+app.use('/api/tasks', tareasRoutes);
+app.use('/api/incidents', incideciasRoutes);
+app.use("/api/dashboard", dashboardRoutes);
+
 
 
 

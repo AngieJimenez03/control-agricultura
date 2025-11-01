@@ -1,6 +1,3 @@
-
-
-
 import express from 'express';
 import userController from '../controllers/user.js';
 import { verificarToken } from '../middlewares/authMiddleware.js';
@@ -23,6 +20,7 @@ router.get("/:id", verificarToken, verificarRol(["admin"]), userController.getBy
 router.put("/:id", verificarToken, verificarRol(["admin"]), userController.update);
 router.delete("/:id", verificarToken, verificarRol(["admin"]), userController.delete);
 router.put('/:id/rol', verificarToken, verificarRol(['admin']), userController.cambiarRol);
+router.get("/rol/:rol", verificarToken, verificarRol(['admin', 'supervisor']), userController.getByRol);
 
 // Ruta protegida de ejemplo (canal)
 router.get('/canal', verificarToken, (req,res)=>{

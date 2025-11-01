@@ -10,6 +10,7 @@ async create(user) {
     return await Usuario.create(user);
     
   }
+  
 
   async getAll(){
    
@@ -30,6 +31,9 @@ async create(user) {
   async update(id, user){
     return await Usuario.findByIdAndUpdate(id,user,{new :true});
 
+  }
+  async getByRol(rol) {
+    return await Usuario.find({ rol });
   }
 
   async delete(id){

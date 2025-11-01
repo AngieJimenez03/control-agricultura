@@ -1,97 +1,152 @@
 import incidenciasModel from "../models/incidencias.js";
 import tareasModel from "../models/tareas.js";
+import { getIO } from "../realtime/index.js";
 
 class incidenciasController {
-
-  // Crear incidencia (solo técnico asignado)
   async crearIncidencia(req, res, next) {
     try {
-      const { descripcion, tarea } = req.body;
+      const usuario = req.user;
+      const { tarea: tareaId, descripcion } = req.body;
 
-      const tareaExiste = await tareasModel.getById(tarea);
-      if (!tareaExiste)
-        return res.status(400).json({ error: "La tarea no existe." });
+      const tarea = await tareasModel.getOneById(tareaId);
+      if (!tarea) return res.status(404).json({ msg: "Tarea no encontrada" });
 
-      const tecnicoId = req.user.id; // tomado del token
-      // Validar que el técnico esté asignado a la tarea
-    
-const asignado = tareaExiste.tecnicosAsignados.some(t => {
-  const tecnicoAsignadoId = t._id ? t._id.toString() : t.toString();
-  return tecnicoAsignadoId === tecnicoId.toString();
-});
-      if (!asignado)
-        return res.status(403).json({ error: "No está asignado a esta tarea." });
+      const esTecnicoAsignado = tarea.tecnicosAsignados.some(
+        t => t._id.toString() === usuario.id.toString()
+      );
+      if (usuario.rol === "tecnico" && !esTecnicoAsignado) {
+        return res.status(403).json({
+          msg: "No puedes reportar incidencias de tareas que no te pertenecen",
+        });
+      }
 
-      const nuevaIncidencia = await incidenciasModel.create({
+      const data = {
         descripcion,
-        tarea,
-        tecnico: tecnicoId,
+        tarea: tarea._id,
+        lote: tarea.lote._id,
+        tecnico: usuario.id,
+        supervisor: tarea.supervisor._id,
+      };
+
+      const nuevaIncidencia = await incidenciasModel.create(data);
+
+      const io = getIO();
+      const loteId = tarea.lote._id.toString();
+
+      // Emitir solo a admin, supervisor y técnicos del lote
+      io.to("admin").emit("nueva_incidencia", {
+        tipo: "incidencia",
+        loteId,
+        tareaId: tarea._id,
+        descripcion,
+        reportadoPor: usuario.email,
+        fecha: new Date().toLocaleString(),
+        mensaje: `Nueva incidencia en el lote "${tarea.lote.nombre}": ${descripcion}`,
+      });
+
+      io.to(`supervisor:${tarea.supervisor.email}`).emit("nueva_incidencia", {
+        tipo: "incidencia",
+        loteId,
+        tareaId: tarea._id,
+        descripcion,
+        reportadoPor: usuario.email,
+        fecha: new Date().toLocaleString(),
+        mensaje: `Nueva incidencia en el lote "${tarea.lote.nombre}": ${descripcion}`,
+      });
+
+      io.to(`lote:${loteId}`).emit("nueva_incidencia", {
+        tipo: "incidencia",
+        loteId,
+        tareaId: tarea._id,
+        descripcion,
+        reportadoPor: usuario.email,
+        fecha: new Date().toLocaleString(),
+        mensaje: `Nueva incidencia en el lote "${tarea.lote.nombre}": ${descripcion}`,
       });
 
       res.status(201).json({
         msg: "Incidencia registrada correctamente",
         incidencia: nuevaIncidencia,
       });
-    } catch (error) {
-      next(error);
+    } catch (e) {
+      next(e);
     }
   }
 
-  // Obtener incidencias según rol
   async obtenerIncidencias(req, res, next) {
     try {
-      const { rol, id } = req.user;
-      let incidencias;
+      const usuario = req.user;
+      let incidencias = await incidenciasModel.getAll();
 
-      if (rol === "admin") {
-        incidencias = await incidenciasModel.getAll();
-      } else if (rol === "supervisor") {
-        incidencias = await incidenciasModel.getBySupervisor(id);
-      } else if (rol === "tecnico") {
-        incidencias = await incidenciasModel.getByTecnico(id);
+      if (usuario.rol === "admin") {
+      } else if (usuario.rol === "supervisor") {
+        incidencias = incidencias.filter(i => i.supervisor.email === usuario.email);
+      } else if (usuario.rol === "tecnico") {
+        incidencias = incidencias.filter(i => i.tecnico.email === usuario.email);
       }
 
       res.status(200).json(incidencias);
-    } catch (error) {
-      next(error);
+    } catch (e) {
+      next(e);
     }
   }
 
-  // Supervisor actualiza estado
-  async actualizarEstado(req, res, next) {
+  async obtenerIncidenciaPorId(req, res, next) {
     try {
-      const { id } = req.params;
-      const { estado, observacionesSupervisor } = req.body;
-
-      const incidencia = await incidenciasModel.update(id, {
-        estado,
-        observacionesSupervisor,
-      });
-
-      if (!incidencia)
-        return res.status(404).json({ error: "Incidencia no encontrada" });
-
-      res.status(200).json({
-        msg: "Estado actualizado correctamente",
-        incidencia,
-      });
-    } catch (error) {
-      next(error);
+      const incidencia = await incidenciasModel.getOneById(req.params.id);
+      if (!incidencia) return res.status(404).json({ msg: "Incidencia no encontrada" });
+      res.status(200).json(incidencia);
+    } catch (e) {
+      next(e);
     }
   }
 
-  // Admin elimina incidencia
+  async actualizarIncidencia(req, res, next) {
+    try {
+      const usuario = req.user;
+      const { id } = req.params;
+      const { estado } = req.body;
+
+      const incidencia = await incidenciasModel.getOneById(id);
+      if (!incidencia) return res.status(404).json({ msg: "Incidencia no encontrada" });
+
+      if (usuario.rol === "supervisor" && incidencia.supervisor.email !== usuario.email) {
+        return res.status(403).json({ msg: "No puedes modificar incidencias de otros lotes" });
+      }
+
+      if (estado === "resuelta") {
+        incidencia.fechaResuelta = new Date();
+      }
+
+      incidencia.estado = estado;
+      await incidencia.save();
+
+      const io = getIO();
+      io.emit("incidencia_actualizada", {
+        id: incidencia._id,
+        estado: incidencia.estado,
+        actualizadoPor: usuario.email,
+        fecha: new Date().toLocaleTimeString(),
+      });
+
+      res.status(200).json({ msg: "Estado de incidencia actualizado", incidencia });
+    } catch (e) {
+      next(e);
+    }
+  }
+
   async eliminarIncidencia(req, res, next) {
     try {
-      const { id } = req.params;
-      const eliminada = await incidenciasModel.delete(id);
+      if (req.user.rol !== "admin") {
+        return res.status(403).json({ msg: "Solo el administrador puede eliminar incidencias" });
+      }
 
-      if (!eliminada)
-        return res.status(404).json({ error: "Incidencia no encontrada" });
+      const eliminado = await incidenciasModel.delete(req.params.id);
+      if (!eliminado) return res.status(404).json({ msg: "Incidencia no encontrada" });
 
       res.status(200).json({ msg: "Incidencia eliminada correctamente" });
-    } catch (error) {
-      next(error);
+    } catch (e) {
+      next(e);
     }
   }
 }

@@ -9,8 +9,8 @@ const router = express.Router();
 router.post('/', verificarToken, verificarRol(['admin']), lotesController.crearLote);
 router.delete('/:id', verificarToken, verificarRol(['admin']), lotesController.eliminarLote);
 
-// Admin y supervisor pueden actualizar
-router.put('/:id', verificarToken, verificarRol(['admin', 'supervisor']), lotesController.actualizarLote);
+// Admin actualizar
+router.put('/:id', verificarToken, verificarRol(['admin',]), lotesController.actualizarLote);
 
 // Todos los usuarios autenticados pueden ver
 router.get('/', verificarToken, lotesController.obtenerLotes);

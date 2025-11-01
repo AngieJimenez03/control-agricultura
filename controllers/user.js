@@ -32,22 +32,33 @@ class usuariosControllers {
     } catch (e) {
       next(e);
     }
-  }  async login(req, res, next){
-    try {
-      const {email, clave} = req.body;
+  } async login(req, res, next) {
+  try {
+    const { email, clave } = req.body;
 
-      const usuario = await usuariosModel.getOne({email});
-      if(!usuario) return res.status(400).json({error:"Usuario no existe"});
+    const usuario = await usuariosModel.getOne({ email });
+    if (!usuario) return res.status(400).json({ error: "Usuario no existe" });
 
-      const valido = await bcrypt.compare(clave, usuario.clave);
-      if(!valido) return res.status(400).json({error:"Contraseña incorrecta"});
+    const valido = await bcrypt.compare(clave, usuario.clave);
+    if (!valido) return res.status(400).json({ error: "Contraseña incorrecta" });
 
-      const token = generarToken(usuario);
-      res.status(200).json({msg:"Usuario autenticado", token, rol: usuario.rol
-        
-      });
-    } catch(e){ next(e); }
+    const token = generarToken(usuario);
+
+    // Enviar también datos del usuario para el frontend
+    res.status(200).json({
+      msg: "Usuario autenticado",
+      token,
+      usuario: {
+        id: usuario._id,
+        nombre: usuario.nombre,
+        email: usuario.email,
+        rol: usuario.rol,
+      },
+    });
+  } catch (e) {
+    next(e);
   }
+}
   
   //  Obtener todos los usuarios (solo admin)
   async getAll(req, res, next) {
@@ -58,7 +69,19 @@ class usuariosControllers {
       next(error);
     }
   }
+async getByRol(req, res, next) {
+  try {
+    const { rol } = req.params;
+    const usuarios = await usuariosModel.getByRol(rol);
 
+    if (!usuarios.length)
+      return res.status(404).json({ msg: "No hay usuarios con ese rol" });
+
+    res.status(200).json(usuarios);
+  } catch (error) {
+    next(error);
+  }
+}
   //  Obtener usuario por ID 
   async getById(req, res, next) {
     try {
