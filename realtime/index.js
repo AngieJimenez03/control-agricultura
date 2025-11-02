@@ -5,7 +5,6 @@ import iniciarMonitorDeAlertas from "./alertas.js";
 
 let ioGlobal;
 
-// Permite obtener la instancia global de io en cualquier controlador
 export function getIO() {
   if (!ioGlobal) throw new Error("Socket.IO no inicializado");
   return ioGlobal;
@@ -14,7 +13,7 @@ export function getIO() {
 export default function inicializarSockets(io) {
   ioGlobal = io;
 
-  // Middleware de autenticación JWT para sockets
+  // Middleware para validar token
   io.use((socket, next) => {
     const token = socket.handshake.auth?.token;
     if (!token) return next(new Error("Token requerido"));
@@ -28,41 +27,43 @@ export default function inicializarSockets(io) {
   });
 
   io.on("connection", (socket) => {
-    console.log(` Usuario conectado: ${socket.user.email} (${socket.user.rol})`);
+    const { email, rol } = socket.user;
+    console.log(` Usuario conectado: ${email} (${rol})`);
 
-    // Unir al usuario a una "sala" según su rol o lote
-    if (socket.user.rol === "admin") socket.join("admin");
-    else if (socket.user.rol === "supervisor")
-      socket.join(`supervisor:${socket.user.email}`);
-    else if (socket.user.rol === "tecnico") {
-      socket.user.lotesAsignados?.forEach((loteId) =>
-        socket.join(`lote:${loteId}`)
-      );
+    //  Unir a la sala general de tareas
+    socket.join("tasks");
+
+    // Salas según rol (para permisos específicos)
+    if (rol === "admin") {
+      socket.join("admin");
+    } else if (rol === "supervisor") {
+      socket.join(`supervisor:${email}`);
+    } else if (rol === "tecnico") {
+      socket.join(`tecnico:${email}`);
     }
 
-    // 🔹 Conectar módulo de chat
-    chatPorLote(io, socket);
-
-    // 🔹 Permitir unión manual desde el frontend
+    //  Unión manual (si se envían lotes desde el front)
     socket.on("joinRoom", ({ rol, email, lotes }) => {
+      socket.join("tasks");
       if (rol === "admin") socket.join("admin");
       else if (rol === "supervisor") socket.join(`supervisor:${email}`);
-      else if (rol === "tecnico" && Array.isArray(lotes)) {
-        lotes.forEach((id) => socket.join(`lote:${id}`));
+      else if (rol === "tecnico") {
+        socket.join(`tecnico:${email}`);
+        if (Array.isArray(lotes)) {
+          lotes.forEach((id) => socket.join(`lote:${id}`));
+        }
       }
-     socket.on("joinRoom", ({ rol, email, lotes }) => {
-  console.log(`🟢 ${email} (${rol}) se unió manualmente a salas:`, lotes);
-});
+      console.log(` ${email} (${rol}) unido a salas:`, lotes);
     });
 
-    // 🔹 Desconexión
+    // Chat de lote (si aplica)
+    chatPorLote(io, socket);
+
     socket.on("disconnect", () => {
       console.log(` Usuario desconectado: ${socket.user.email}`);
     });
   });
 
-  // 🔹 Iniciar alertas automáticas
   iniciarMonitorDeAlertas();
-
-  console.log(" Socket.IO inicializado correctamente con alertas automáticas");
+  console.log("⚡ Socket.IO inicializado correctamente");
 }
