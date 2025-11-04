@@ -131,64 +131,68 @@ class tareasController {
       next(e);
     }
   }
-
-  //  Actualizar tarea (solo admin)
-  async actualizarTarea(req, res, next) {
-    try {
-      if (req.user.rol !== "admin") {
-        return res.status(403).json({ msg: "Solo el administrador puede actualizar tareas" });
-      }
-
-      const data = req.body;
-      if (data.fechaLimite) {
-        const fecha = new Date(data.fechaLimite);
-        if (isNaN(fecha.getTime())) {
-          return res.status(400).json({ msg: "Fecha límite inválida" });
-        }
-        data.fechaLimite = new Date(fecha.getTime() + fecha.getTimezoneOffset() * 60000);
-      }
-
-      const camposPermitidos = {
-        titulo: data.titulo,
-        tipo: data.tipo,
-        estado: data.estado,
-        tecnicosAsignados: data.tecnicosAsignados,
-        fechaLimite: data.fechaLimite || undefined,
-      };
-
-      const tareaActualizada = await tareasModel.update(req.params.id, camposPermitidos);
-      if (!tareaActualizada) return res.status(404).json({ msg: "Tarea no encontrada" });
-
-      const io = getIO();
-      const loteId = tareaActualizada.lote._id.toString();
-
-      //  Emitir actualización
-      const payload = {
-        tareaId: tareaActualizada._id,
-        titulo: tareaActualizada.titulo,
-        nuevoEstado: tareaActualizada.estado,
-        cambiadoPor: req.user.email,
-        rol: req.user.rol,
-        mensaje: `La tarea "${tareaActualizada.titulo}" fue actualizada.`,
-        fecha: new Date().toLocaleTimeString(),
-      };
-
-      io.to("admin").emit("tarea_actualizada", payload);
-      io.to(`supervisor:${tareaActualizada.supervisor.email}`).emit("tarea_actualizada", payload);
-      io.to(`lote:${loteId}`).emit("tarea_actualizada", payload);
-
-      tareaActualizada.tecnicosAsignados?.forEach((tecnico) => {
-        if (tecnico.email) io.to(`tecnico:${tecnico.email}`).emit("tarea_actualizada", payload);
-      });
-
-      res.status(200).json({
-        msg: "Tarea actualizada correctamente",
-        tarea: tareaActualizada,
-      });
-    } catch (e) {
-      next(e);
+//  Actualizar tarea (admin o supervisor)
+async actualizarTarea(req, res, next) {
+  try {
+    // ✅ Permitir admin y supervisor
+    if (!["admin", "supervisor"].includes(req.user.rol)) {
+      return res.status(403).json({ msg: "No tienes permisos para actualizar tareas" });
     }
+
+    const data = req.body;
+
+    // 🔹 Validar fecha límite
+    if (data.fechaLimite) {
+      const fecha = new Date(data.fechaLimite);
+      if (isNaN(fecha.getTime())) {
+        return res.status(400).json({ msg: "Fecha límite inválida" });
+      }
+      data.fechaLimite = new Date(fecha.getTime() + fecha.getTimezoneOffset() * 60000);
+    }
+
+    // 🔹 Campos permitidos para actualización
+    const camposPermitidos = {
+      titulo: data.titulo,
+      tipo: data.tipo,
+      estado: data.estado,
+      tecnicosAsignados: data.tecnicosAsignados,
+      fechaLimite: data.fechaLimite || undefined,
+    };
+
+    const tareaActualizada = await tareasModel.update(req.params.id, camposPermitidos);
+    if (!tareaActualizada) return res.status(404).json({ msg: "Tarea no encontrada" });
+
+    const io = getIO();
+    const loteId = tareaActualizada.lote._id.toString();
+
+    // 🔹 Emitir notificación de actualización
+    const payload = {
+      tareaId: tareaActualizada._id,
+      titulo: tareaActualizada.titulo,
+      nuevoEstado: tareaActualizada.estado,
+      cambiadoPor: req.user.email,
+      rol: req.user.rol,
+      mensaje: `La tarea "${tareaActualizada.titulo}" fue actualizada.`,
+      fecha: new Date().toLocaleTimeString(),
+    };
+
+    io.to("admin").emit("tarea_actualizada", payload);
+    io.to(`supervisor:${tareaActualizada.supervisor.email}`).emit("tarea_actualizada", payload);
+    io.to(`lote:${loteId}`).emit("tarea_actualizada", payload);
+
+    tareaActualizada.tecnicosAsignados?.forEach((tecnico) => {
+      if (tecnico.email) io.to(`tecnico:${tecnico.email}`).emit("tarea_actualizada", payload);
+    });
+
+    res.status(200).json({
+      msg: "Tarea actualizada correctamente",
+      tarea: tareaActualizada,
+    });
+  } catch (e) {
+    next(e);
   }
+}
+
 
   //  Actualizar estado (solo admin y técnico)
   async actualizarEstado(req, res, next) {

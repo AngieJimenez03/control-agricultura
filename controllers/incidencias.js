@@ -102,38 +102,43 @@ class incidenciasController {
   }
 
   async actualizarIncidencia(req, res, next) {
-    try {
-      const usuario = req.user;
-      const { id } = req.params;
-      const { estado } = req.body;
+  try {
+    const usuario = req.user;
+    const { id } = req.params;
+    const { estado, descripcion } = req.body;
 
-      const incidencia = await incidenciasModel.getOneById(id);
-      if (!incidencia) return res.status(404).json({ msg: "Incidencia no encontrada" });
+    const incidencia = await incidenciasModel.getOneById(id);
+    if (!incidencia) return res.status(404).json({ msg: "Incidencia no encontrada" });
 
-      if (usuario.rol === "supervisor" && incidencia.supervisor.email !== usuario.email) {
-        return res.status(403).json({ msg: "No puedes modificar incidencias de otros lotes" });
-      }
-
-      if (estado === "resuelta") {
-        incidencia.fechaResuelta = new Date();
-      }
-
-      incidencia.estado = estado;
-      await incidencia.save();
-
-      const io = getIO();
-      io.emit("incidencia_actualizada", {
-        id: incidencia._id,
-        estado: incidencia.estado,
-        actualizadoPor: usuario.email,
-        fecha: new Date().toLocaleTimeString(),
-      });
-
-      res.status(200).json({ msg: "Estado de incidencia actualizado", incidencia });
-    } catch (e) {
-      next(e);
+    // 🔒 Validación de supervisor
+    if (usuario.rol === "supervisor" && incidencia.supervisor.email !== usuario.email) {
+      return res.status(403).json({ msg: "No puedes modificar incidencias de otros lotes" });
     }
+
+    // 🔹 Actualización flexible
+    if (estado) incidencia.estado = estado;
+    if (descripcion) incidencia.descripcion = descripcion;
+
+    if (estado === "resuelta") {
+      incidencia.fechaResuelta = new Date();
+    }
+
+    await incidencia.save();
+
+    const io = getIO();
+    io.emit("incidencia_actualizada", {
+      id: incidencia._id,
+      estado: incidencia.estado,
+      descripcion: incidencia.descripcion,
+      actualizadoPor: usuario.email,
+      fecha: new Date().toLocaleTimeString(),
+    });
+
+    res.status(200).json({ msg: "Incidencia actualizada correctamente", incidencia });
+  } catch (e) {
+    next(e);
   }
+}
 
   async eliminarIncidencia(req, res, next) {
     try {
