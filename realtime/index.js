@@ -4,6 +4,7 @@ import chatPorLote from "./chat.lote.js";
 import iniciarMonitorDeAlertas from "./alertas.js";
 
 let ioGlobal;
+const usuariosConectados = new Map(); // email → socket.id
 
 export function getIO() {
   if (!ioGlobal) throw new Error("Socket.IO no inicializado");
@@ -30,40 +31,37 @@ export default function inicializarSockets(io) {
     const { email, rol } = socket.user;
     console.log(` Usuario conectado: ${email} (${rol})`);
 
-    //  Unir a la sala general de tareas
+    usuariosConectados.set(email, socket.id);
+    io.emit("usuarios_online", Array.from(usuariosConectados.keys()));
+
+    // Canales base
     socket.join("tasks");
+    if (rol === "admin") socket.join("admin");
+    if (rol === "supervisor") socket.join(`supervisor:${email}`);
+    if (rol === "tecnico") socket.join(`tecnico:${email}`);
+    
+    
 
-    // Salas según rol (para permisos específicos)
-    if (rol === "admin") {
-      socket.join("admin");
-    } else if (rol === "supervisor") {
-      socket.join(`supervisor:${email}`);
-    } else if (rol === "tecnico") {
-      socket.join(`tecnico:${email}`);
-    }
-
-    //  Unión manual (si se envían lotes desde el front)
-    socket.on("joinRoom", ({ rol, email, lotes }) => {
-      socket.join("tasks");
-      if (rol === "admin") socket.join("admin");
-      else if (rol === "supervisor") socket.join(`supervisor:${email}`);
-      else if (rol === "tecnico") {
-        socket.join(`tecnico:${email}`);
-        if (Array.isArray(lotes)) {
-          lotes.forEach((id) => socket.join(`lote:${id}`));
-        }
+    // Unión manual a lotes desde frontend
+    socket.on("joinRoom", ({ lotes }) => {
+      if (Array.isArray(lotes)) {
+        lotes.forEach((id) => {
+          socket.join(`lote:${id}`);
+          console.log(` ${email} unido a lote:${id}`);
+        });
       }
-      console.log(` ${email} (${rol}) unido a salas:`, lotes);
     });
 
-    // Chat de lote (si aplica)
+    // Chat por lote
     chatPorLote(io, socket);
 
     socket.on("disconnect", () => {
-      console.log(` Usuario desconectado: ${socket.user.email}`);
+      usuariosConectados.delete(email);
+      io.emit("usuarios_online", Array.from(usuariosConectados.keys()));
+      console.log(` Usuario desconectado: ${email}`);
     });
   });
 
   iniciarMonitorDeAlertas();
-  console.log("⚡ Socket.IO inicializado correctamente");
+  console.log(" Socket.IO inicializado correctamente");
 }

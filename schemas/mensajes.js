@@ -7,7 +7,7 @@ const mensajeSchema = new mongoose.Schema({
     required: true
   },
   emisor: {
-    type: String, // Guardamos el email del usuario
+    type: String,
     required: true
   },
   rol: {
@@ -17,8 +17,11 @@ const mensajeSchema = new mongoose.Schema({
   },
   texto: {
     type: String,
-    required: true,
     trim: true
+  },
+  imagen: {
+    type: String, // URL o base64
+    default: null
   },
   fecha: {
     type: Date,

@@ -14,6 +14,10 @@ class lotesModel {
     return await Lote.find({ supervisor: new mongoose.Types.ObjectId(supervisorId) })
       .populate("supervisor", "nombre email rol");
   }
+  async getAllIds() {
+    const lotes = await Lote.find({}, "_id");
+    return lotes.map((l) => l._id.toString());
+  }
 
   async getOneById(id) {
     return await Lote.findById(id)

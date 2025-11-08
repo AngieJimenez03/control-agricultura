@@ -1,51 +1,59 @@
-
+// realtime/chat.lote.js
 import mensajesModel from "../models/mensajes.js";
-export default function chatPorLote(io, socket) {
-  //  Unirse a un canal (lote)
-  socket.on("unirse_lote", async (loteId) => {
-    socket.join(loteId);
-    console.log(` ${socket.user?.email || "Usuario"} se unió al lote ${loteId}`);
+import Mensaje from "../schemas/mensajes.js"; // para populate después de crear
 
-    //  Enviar historial guardado al usuario que entra
+export default function chatPorLote(io, socket) {
+  // Unirse al canal de un lote
+  socket.on("unirse_lote", async (loteId) => {
+    // usar prefijo consistente 'lote:<id>' para unir y emitir
+    socket.join(`lote:${loteId}`);
+    console.log(` ${socket.user?.email} se unió al canal lote:${loteId}`);
+
     try {
-      const historial = await mensajesModel.getByLote(loteId);
+      const historial = await mensajesModel.getByLote(loteId); // ya hace populate(lote, 'nombre')
       socket.emit("historial_mensajes", historial);
     } catch (error) {
-      console.error("Error al obtener historial de mensajes:", error.message);
+      console.error(" Error al obtener historial:", error.message);
     }
   });
 
-  //  Enviar mensajes dentro del canal del lote
+  // Enviar mensaje de texto o imagen
   socket.on("mensaje_lote", async (data) => {
-    if (!data?.texto?.trim() || !data.loteId) return;
+    if (!data.loteId || (!data.texto && !data.imagen)) return;
 
-    const mensaje = {
+    // Guardar emisor como nombre si está disponible en el token (socket.user.nombre)
+    const emisorNombre = socket.user?.nombre || socket.user?.email || "Desconocido";
+
+    const mensajeParaGuardar = {
       lote: data.loteId,
-      emisor: socket.user?.email || "usuario@desconocido.com",
+      emisor: emisorNombre,
       rol: socket.user?.rol || "sin_rol",
-      texto: data.texto.trim(),
-      fecha: new Date(),
+      texto: data.texto || "",
+      imagen: data.imagen || null,
+      fecha: new Date()
     };
 
     try {
-      //  Guardar mensaje en la base de datos
-      await mensajesModel.create(mensaje);
+      // guardar y luego traer el doc poblado para emitir (así viene con lote.nombre)
+      const creado = await mensajesModel.create(mensajeParaGuardar);
 
-      //  Emitir el mensaje a todos los conectados en el mismo lote
-      io.to(data.loteId).emit("mensaje_lote", mensaje);
+      // Traer con populate('lote','nombre')
+      const creadoPop = await Mensaje.findById(creado._id).populate("lote", "nombre");
 
-      console.log(` [${data.loteId}] ${mensaje.emisor}: ${mensaje.texto}`);
+      // Emitir a la sala correcta (todos los conectados a lote:<id>)
+      io.to(`lote:${data.loteId}`).emit("mensaje_lote", creadoPop);
+      console.log(` [lote:${data.loteId}] ${creadoPop.emisor}: ${creadoPop.texto || "(imagen)"}`);
     } catch (error) {
-      console.error("Error al guardar o enviar mensaje:", error.message);
+      console.error(" Error al guardar mensaje:", error.message);
     }
   });
 
-  //  Notificación instantánea al lote (para tareas o incidencias)
+  // Notificar evento del lote
   socket.on("notificar_lote", (data) => {
-    io.to(data.loteId).emit("notificacion_lote", {
+    io.to(`lote:${data.loteId}`).emit("notificacion_lote", {
       titulo: data.titulo,
       mensaje: data.mensaje,
-      fecha: new Date().toLocaleTimeString(),
+      fecha: new Date().toLocaleTimeString()
     });
   });
 }

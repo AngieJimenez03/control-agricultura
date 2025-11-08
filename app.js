@@ -1,4 +1,4 @@
-
+//src/app.js
 import express from 'express';
 import 'dotenv/config';
 import cors from 'cors';
@@ -9,6 +9,7 @@ import lotesRoutes from './routes/lotesRouter.js';
 import tareasRoutes from './routes/tareasRouter.js';
 import incideciasRoutes from './routes/incidenciasRouter.js';
 import dashboardRoutes from "./routes/dashboardRouter.js";
+import mensajesRoutes from "./routes/mensajesRouter.js";
 
 
 
@@ -28,6 +29,7 @@ app.use('/api/lots',lotesRoutes);
 app.use('/api/tasks', tareasRoutes);
 app.use('/api/incidents', incideciasRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/messages", mensajesRoutes);
 
 
 

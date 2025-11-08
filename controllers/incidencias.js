@@ -110,7 +110,7 @@ class incidenciasController {
     const incidencia = await incidenciasModel.getOneById(id);
     if (!incidencia) return res.status(404).json({ msg: "Incidencia no encontrada" });
 
-    // 🔒 Validación de supervisor
+    //  Validación de supervisor
     if (usuario.rol === "supervisor" && incidencia.supervisor.email !== usuario.email) {
       return res.status(403).json({ msg: "No puedes modificar incidencias de otros lotes" });
     }
