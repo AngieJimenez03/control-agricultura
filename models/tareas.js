@@ -1,3 +1,4 @@
+//models/tareas.js
 import Tarea from "../schemas/tareas.js";
 import mongoose from "mongoose";
 
@@ -76,6 +77,14 @@ async getBySupervisor(supervisorId) {
   async update(id, data) {
     return await Tarea.findByIdAndUpdate(id, data, { new: true });
   }
+
+async getAllForAlertas() {
+  return await Tarea.find()
+    .populate("lote", "nombre")
+    .populate("supervisor", "nombre email rol")
+    .populate("tecnicosAsignados", "nombre email rol")
+    
+}
 
   //  Eliminar tarea
   async delete(id) {

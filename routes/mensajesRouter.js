@@ -1,16 +1,37 @@
 import express from "express";
 import mensajesController from "../controllers/mensajes.js";
-import { verificarToken } from "../middlewares/authMiddleware.js"; // usa tu mismo middleware de auth
+import { verificarToken } from "../middlewares/authMiddleware.js";
 
 const router = express.Router();
 
-// Obtener historial de mensajes por lote
+/**
+ * @swagger
+ * tags:
+ *   name: Mensajes
+ *   description: Comunicación entre técnicos y supervisores
+ */
+
+/**
+ * @swagger
+ * /api/messages/{loteId}:
+ *   get:
+ *     summary: Obtener mensajes de un lote
+ *     tags: [Mensajes]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: loteId
+ *         in: path
+ *         required: true
+ *         description: ID del lote
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Lista de mensajes
+ */
 router.get("/:loteId", verificarToken, mensajesController.getMensajesPorLote);
-
-// Obtener el último mensaje de cada lote (panel de chats)
 router.get("/", verificarToken, mensajesController.getUltimosMensajes);
-
-// Eliminar mensajes de un lote
 router.delete("/:loteId", verificarToken, mensajesController.eliminarMensajes);
 
 export default router;

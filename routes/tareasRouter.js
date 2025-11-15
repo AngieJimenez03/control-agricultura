@@ -6,6 +6,33 @@ import { verificarRol } from "../middlewares/roleMiddleware.js";
 const router = express.Router();
 
 // Crear tarea (admin o supervisor)
+/**
+ * @swagger
+ * tags:
+ *   name: Tareas
+ *   description: Administración de tareas asignadas
+ */
+
+/**
+ * @swagger
+ * /api/tasks:
+ *   post:
+ *     summary: Crear una tarea
+ *     tags: [Tareas]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           example:
+ *             nombre: "Verificar sensores"
+ *             descripcion: "Revisar sensores en la planta 3"
+ *             prioridad: "media"
+ *     responses:
+ *       201:
+ *         description: Tarea creada correctamente
+ */
 router.post("/", verificarToken, verificarRol(["admin", "supervisor"]), tareasController.crearTarea);
 
 // Obtener tareas

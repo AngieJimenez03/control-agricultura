@@ -10,7 +10,7 @@ import tareasRoutes from './routes/tareasRouter.js';
 import incideciasRoutes from './routes/incidenciasRouter.js';
 import dashboardRoutes from "./routes/dashboardRouter.js";
 import mensajesRoutes from "./routes/mensajesRouter.js";
-
+import { swaggerUi, swaggerSpec } from "./config/swagger.js";
 
 
 //  Agregamos HTTP y Socket.IO
@@ -23,6 +23,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 // Rutas HTTP
 app.use('/api/users', userRoutes);
 app.use('/api/lots',lotesRoutes);

@@ -1,3 +1,4 @@
+//controllers/tareas.js
 import mongoose from "mongoose";
 import tareasModel from "../models/tareas.js";
 import lotesModel from "../models/lotes.js";
@@ -251,6 +252,12 @@ async actualizarTarea(req, res, next) {
     } catch (e) {
       next(e);
     }
+  }
+   async getAllForAlertas() {
+    return await Tarea.find()
+      .populate("lote", "nombre ubicacion")
+      .populate("supervisor", "nombre email rol")
+      .populate("tecnicosAsignados", "nombre email rol");
   }
 
   // 🗑 Eliminar tarea
